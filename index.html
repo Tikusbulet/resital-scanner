@@ -87,15 +87,6 @@
       color: #b00020;
       font-weight: bold;
     }
-
-    .result {
-      margin-top: 18px;
-      padding: 15px;
-      background: #f3f3f3;
-      border-radius: 12px;
-      word-break: break-word;
-      font-size: 16px;
-    }
   </style>
 </head>
 
@@ -123,8 +114,6 @@
     Tekan tombol untuk membuka kamera.
   </div>
 
-  <div id="hasil" class="result" style="display:none;"></div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -136,6 +125,19 @@ let canvas = null;
 let ctx = null;
 let scanning = false;
 let stream = null;
+
+
+/* =====================================================
+   URL WEB APP RESITAL
+   ===================================================== */
+
+const APP_URL =
+  "https://script.google.com/macros/s/AKfycbzYsf6G8PxGFmnVaPVrBKbn3HRiqzKQRjWHc2ByjlyFOJgg8RoLuL5OGZ18Ag7gmkr/exec";
+
+
+/* =====================================================
+   MULAI SCANNER
+   ===================================================== */
 
 function mulaiScanner() {
 
@@ -162,6 +164,7 @@ function mulaiScanner() {
   reader.appendChild(video);
 
   canvas = document.createElement("canvas");
+
   ctx = canvas.getContext("2d", {
     willReadFrequently: true
   });
@@ -174,6 +177,7 @@ function mulaiScanner() {
     },
     audio: false
   })
+
   .then(function(s) {
 
     stream = s;
@@ -190,6 +194,7 @@ function mulaiScanner() {
     requestAnimationFrame(scanFrame);
 
   })
+
   .catch(function(error) {
 
     console.error(error);
@@ -203,6 +208,10 @@ function mulaiScanner() {
   });
 }
 
+
+/* =====================================================
+   BACA FRAME KAMERA
+   ===================================================== */
 
 function scanFrame() {
 
@@ -248,10 +257,15 @@ function scanFrame() {
 }
 
 
+/* =====================================================
+   QR DITEMUKAN
+   ===================================================== */
+
 function qrDitemukan(data) {
 
   scanning = false;
 
+  /* Matikan kamera */
   if (stream) {
 
     stream.getTracks().forEach(function(track) {
@@ -261,26 +275,76 @@ function qrDitemukan(data) {
   }
 
   document.getElementById("status").innerHTML =
-    "<div class='success'>✓ QR BERHASIL DIBACA</div>";
+    "<div class='success'>" +
+    "✓ QR BERHASIL DIBACA<br>" +
+    "Membuka data peserta..." +
+    "</div>";
 
-  document.getElementById("hasil").style.display = "block";
+  /* Ambil ID peserta dari QR */
+  const idPeserta = ambilIDPeserta(data);
 
-  document.getElementById("hasil").innerHTML =
-    "<b>Isi QR:</b><br><br>" +
-    escapeHtml(data);
+  if (!idPeserta) {
 
+    document.getElementById("status").innerHTML =
+      "<div class='error'>" +
+      "QR tidak dikenali sebagai QR Peserta Resital." +
+      "</div>";
+
+    return;
+  }
+
+  /* Tunggu sebentar agar status terlihat */
+  setTimeout(function() {
+
+    bukaPeserta(idPeserta);
+
+  }, 500);
 }
 
 
-function escapeHtml(text) {
+/* =====================================================
+   AMBIL ID PESERTA DARI QR
+   ===================================================== */
 
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function ambilIDPeserta(data) {
 
+  try {
+
+    const url = new URL(String(data).trim());
+
+    const id = url.searchParams.get("id");
+
+    if (id) {
+
+      return String(id).trim();
+
+    }
+
+  } catch (error) {
+
+    console.log(
+      "QR bukan URL:",
+      data
+    );
+
+  }
+
+  return "";
+}
+
+
+/* =====================================================
+   BUKA WEB APP PESERTA
+   ===================================================== */
+
+function bukaPeserta(idPeserta) {
+
+  const tujuan =
+    APP_URL +
+    "?id=" +
+    encodeURIComponent(idPeserta);
+
+  window.location.href = tujuan;
 }
 
 </script>
